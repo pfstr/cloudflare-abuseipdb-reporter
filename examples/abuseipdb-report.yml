@@ -1,0 +1,37 @@
+# Copy to .github/workflows/abuseipdb-report.yml in a (private) repository of your own.
+# Secrets: CF_ANALYTICS_TOKEN (Zone > Analytics > Read), ABUSEIPDB_API_KEY
+name: Report WAF blocks to AbuseIPDB
+
+on:
+  schedule:
+    - cron: "7 * * * *"   # hourly; late or skipped runs are caught up automatically
+  workflow_dispatch:
+    inputs:
+      hours:
+        description: "Empty = catch up since last run; number = fixed window of n full hours"
+        default: ""
+      dry_run:
+        description: "Only list, do not report"
+        type: boolean
+        default: false
+
+concurrency:
+  group: abuseipdb-report
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: pfstr/cloudflare-abuseipdb-reporter@v1
+        with:
+          cloudflare-api-token: ${{ secrets.CF_ANALYTICS_TOKEN }}
+          abuseipdb-api-key: ${{ secrets.ABUSEIPDB_API_KEY }}
+          zone-id: 0123456789abcdef0123456789abcdef      # your zone ID
+          rule-ids: 0123456789abcdef0123456789abcdef     # ID of your WAF rule (see README)
+          comment: "Blocked by WAF: {count} request(s) probing for WordPress files and secrets: {requests}"
+          hours: ${{ inputs.hours }}
+          dry-run: ${{ inputs.dry_run || false }}

@@ -1,0 +1,88 @@
+name: Cloudflare WAF to AbuseIPDB
+description: Report IP addresses blocked by selected Cloudflare WAF rules to AbuseIPDB, gap-free and without duplicates.
+author: Rafael Pfister (rafaelpfister.ch)
+branding:
+  icon: shield
+  color: orange
+
+inputs:
+  cloudflare-api-token:
+    description: Cloudflare API token with the single permission "Zone > Analytics > Read" for the zone.
+    required: true
+  abuseipdb-api-key:
+    description: AbuseIPDB API key. Not needed for dry-run or csv-file.
+    required: false
+  zone-id:
+    description: Cloudflare zone ID (dashboard, zone overview, right column).
+    required: true
+  rule-ids:
+    description: Comma-separated WAF rule IDs whose events are reported. Only report rules that match unambiguous attacks.
+    required: true
+  waf-actions:
+    description: Comma-separated WAF actions to report.
+    default: block
+  categories:
+    description: AbuseIPDB category IDs, comma-separated (21 = Web App Attack). See https://www.abuseipdb.com/categories
+    default: "21"
+  comment:
+    description: Report comment. Placeholders {count} and {requests} (method and path, up to 8). Never put personal data here.
+    default: "Blocked by Cloudflare WAF: {count} request(s): {requests}"
+  min-hits:
+    description: Only report IPs with at least this many events in the window.
+    default: "1"
+  ignore-ips:
+    description: Comma-separated IPs that are never reported (e.g. your own). Private ranges are always skipped.
+    default: ""
+  hours:
+    description: Empty = catch up from the last successful run. A number = fixed window of n full hours, state unchanged.
+    default: ""
+  end-offset-hours:
+    description: Move the end of a fixed window back by n hours (backfilling older periods).
+    default: "0"
+  max-lookback-hours:
+    description: Upper limit for catching up. Cloudflare keeps firewall events for a limited time depending on the plan.
+    default: "72"
+  dry-run:
+    description: Only list what would be reported.
+    default: "false"
+  csv-file:
+    description: Write a CSV for https://www.abuseipdb.com/bulk-report instead of reporting (implies dry-run).
+    default: ""
+  state-key:
+    description: Prefix of the Actions cache key that stores the reporting state. Change it to run several independent jobs.
+    default: abuseipdb-state-
+
+runs:
+  using: composite
+  steps:
+    - name: Restore state
+      uses: actions/cache/restore@v4
+      with:
+        path: abuseipdb-state.json
+        key: ${{ inputs.state-key }}${{ github.run_id }}
+        restore-keys: ${{ inputs.state-key }}
+    - name: Report
+      shell: bash
+      env:
+        CF_API_TOKEN: ${{ inputs.cloudflare-api-token }}
+        ABUSEIPDB_API_KEY: ${{ inputs.abuseipdb-api-key }}
+        ZONE_ID: ${{ inputs.zone-id }}
+        RULE_IDS: ${{ inputs.rule-ids }}
+        WAF_ACTIONS: ${{ inputs.waf-actions }}
+        CATEGORIES: ${{ inputs.categories }}
+        COMMENT: ${{ inputs.comment }}
+        MIN_HITS: ${{ inputs.min-hits }}
+        IGNORE_IPS: ${{ inputs.ignore-ips }}
+        HOURS: ${{ inputs.hours }}
+        END_OFFSET_HOURS: ${{ inputs.end-offset-hours }}
+        MAX_LOOKBACK_HOURS: ${{ inputs.max-lookback-hours }}
+        DRY_RUN: ${{ inputs.dry-run }}
+        CSV_FILE: ${{ inputs.csv-file }}
+        STATE_FILE: abuseipdb-state.json
+      run: node "$GITHUB_ACTION_PATH/src/report.mjs"
+    - name: Save state
+      if: always() && hashFiles('abuseipdb-state.json') != ''
+      uses: actions/cache/save@v4
+      with:
+        path: abuseipdb-state.json
+        key: ${{ inputs.state-key }}${{ github.run_id }}

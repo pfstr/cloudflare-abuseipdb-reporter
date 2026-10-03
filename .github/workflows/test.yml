@@ -1,0 +1,25 @@
+name: Test
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - run: node --test test/lib.test.mjs
+      - name: Dry run without credentials must fail cleanly
+        run: |
+          if node src/report.mjs 2> err.txt; then exit 1; fi
+          grep -q "cloudflare-api-token is required" err.txt

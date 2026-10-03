@@ -1,0 +1,41 @@
+(
+  lower(http.request.uri.path) contains "/wp-"
+  or lower(http.request.uri.path) contains "/wordpress"
+  or lower(http.request.uri.path) contains ".php"
+  or lower(http.request.uri.path) contains "phpinfo"
+  or lower(http.request.uri.path) contains "phpmyadmin"
+  or lower(http.request.uri.path) contains "/actuator"
+  or lower(http.request.uri.path) contains "/vendor/"
+  or lower(http.request.uri.path) contains "/cgi-bin/"
+  or lower(http.request.uri.path) contains "credentials"
+  or lower(http.request.uri.path) contains "secrets"
+  or lower(http.request.uri.path) contains "appsettings"
+  or lower(http.request.uri.path) contains "docker-compose"
+  or lower(http.request.uri.path) contains "dockerfile"
+  or lower(http.request.uri.path) contains "/@fs/"
+  or lower(http.request.uri.path) contains "/__/firebase"
+  or lower(http.request.uri.path) contains "/debug/vars"
+  or lower(http.request.uri.path) contains "/_profiler"
+  or lower(http.request.uri.path) contains "_payload.json"
+  or (http.request.uri.path contains "/." and not starts_with(http.request.uri.path, "/.well-known/"))
+  or ends_with(lower(http.request.uri.path), ".env")
+  or ends_with(lower(http.request.uri.path), ".bak")
+  or ends_with(lower(http.request.uri.path), ".old")
+  or ends_with(lower(http.request.uri.path), ".orig")
+  or ends_with(lower(http.request.uri.path), ".sql")
+  or ends_with(lower(http.request.uri.path), ".yml")
+  or ends_with(lower(http.request.uri.path), ".yaml")
+  or ends_with(lower(http.request.uri.path), ".tfstate")
+  or ends_with(lower(http.request.uri.path), ".axd")
+  or ends_with(lower(http.request.uri.path), ".ini")
+  or ends_with(lower(http.request.uri.path), ".pem")
+  or ends_with(lower(http.request.uri.path), ".key")
+  or ends_with(lower(http.request.uri.path), ".swp")
+  or ends_with(lower(http.request.uri.path), ".log")
+  or ends_with(lower(http.request.uri.path), ".zip")
+  or ends_with(lower(http.request.uri.path), ".tar")
+  or ends_with(lower(http.request.uri.path), ".gz")
+  or ends_with(lower(http.request.uri.path), ".7z")
+  or ends_with(lower(http.request.uri.path), ".rar")
+  or lower(http.request.uri.path) in {"/server-status" "/config.js" "/config.json" "/settings.json" "/auth.json" "/oauth.json" "/runtime-config.js" "/babel.config.js" "/env.txt" "/userfiles"}
+)
