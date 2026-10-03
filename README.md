@@ -22,6 +22,8 @@ Report what is unambiguous. A rule that blocks `/wp-login.php` on a site without
 
 Create a custom rule (Security, WAF, Custom rules) with the action **Block** for paths your site never serves. An example for sites without PHP or WordPress is in [`examples/waf-rule-static-site.txt`](examples/waf-rule-static-site.txt). Before you activate it, check it against your own URLs (for example, all URLs in your sitemap).
 
+For more building blocks, see [sefinek/Cloudflare-WAF-Expressions](https://github.com/sefinek/Cloudflare-WAF-Expressions), a maintained collection of WAF expressions for suspicious paths, file extensions, injections and bots. Pick the path and extension parts for the rule you report. Parts that match user agents, referrers or bot categories also hit legitimate clients (API tools, AI agents, crawlers); keep those in a separate rule that you don't report.
+
 ### 2. Rule ID
 
 Open Security, Events, expand a blocked request of that rule and copy the 32-character ID under **Rule**. If you edit the rule later, the ID stays the same. A rule you delete and recreate gets a new ID.
