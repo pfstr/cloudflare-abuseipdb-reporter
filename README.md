@@ -2,7 +2,7 @@
 
 A GitHub Action that reports IP addresses blocked by selected [Cloudflare WAF](https://developers.cloudflare.com/waf/custom-rules/) custom rules to [AbuseIPDB](https://www.abuseipdb.com/). It runs on a schedule in your own repository. You don't need a server or any dependencies, and it uses a read-only Cloudflare token.
 
-Built and run in production by [Rafael Pfister](https://rafaelpfister.ch/?utm_source=github&utm_medium=readme&utm_campaign=cloudflare-abuseipdb-reporter). Background and walkthrough (German): [Cloudflare-WAF-Blocks automatisch an AbuseIPDB melden](https://rafaelpfister.ch/blog/cloudflare-waf-abuseipdb?utm_source=github&utm_medium=readme&utm_campaign=cloudflare-abuseipdb-reporter).
+Built and run in production by [Rafael Pfister](https://rafaelpfister.ch/?utm_source=github&utm_medium=readme&utm_campaign=cloudflare-abuseipdb-reporter). Background and walkthrough: [Reporting Cloudflare WAF blocks to AbuseIPDB automatically](https://rafaelpfister.ch/en/blog/cloudflare-waf-abuseipdb?utm_source=github&utm_medium=readme&utm_campaign=cloudflare-abuseipdb-reporter).
 
 ## What it does
 
