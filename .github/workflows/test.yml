@@ -23,3 +23,19 @@ jobs:
         run: |
           if node src/report.mjs 2> err.txt; then exit 1; fi
           grep -q "cloudflare-api-token is required" err.txt
+
+  action:
+    # Loads action.yml through the runner, so a manifest the runner cannot parse fails here and not for users.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - id: run
+        uses: ./
+        continue-on-error: true
+        with:
+          cloudflare-api-token: ""
+          zone-id: test
+          rule-ids: test
+          dry-run: true
+      - name: Action loads and stops at the missing token
+        run: test "${{ steps.run.outcome }}" = failure
