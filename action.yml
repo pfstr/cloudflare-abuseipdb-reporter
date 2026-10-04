@@ -28,7 +28,7 @@ inputs:
     description: Report comment. Placeholders {count} and {requests} (method and path, up to 8). Never put personal data here.
     default: "Blocked by Cloudflare WAF: {count} request(s): {requests}"
   credit:
-    description: Append " • Reported by: github.com/pfstr/cloudflare-abuseipdb-reporter" to each comment. Set to false to turn it off.
+    description: "Append ' • Reported by: github.com/pfstr/cloudflare-abuseipdb-reporter' to each comment. Set to false to turn it off."
     default: "true"
   min-hits:
     description: Only report IPs with at least this many events in the window.
