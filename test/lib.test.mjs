@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { aggregate, buildComment, computeWindow, isPrivate, toCsv } from "../src/lib.mjs";
+import { aggregate, buildComment, computeWindow, isPrivate, toCsv, withCredit, CREDIT } from "../src/lib.mjs";
 
 const now = new Date("2026-10-03T14:27:00Z");
 const iso = (d) => d.toISOString();
@@ -78,4 +78,10 @@ test("long request lists are shortened so the end of the comment survives", () =
 test("csv escapes quotes", () => {
   const csv = toCsv([{ ip: "1.2.3.4", date: "2026-10-03T12:00:00Z", comment: 'say "hi"' }], "21,15");
   assert.equal(csv, 'IP,Categories,ReportDate,Comment\n1.2.3.4,"21,15",2026-10-03T12:00:00Z,"say ""hi"""\n');
+});
+
+test("credit is appended once and can be switched off", () => {
+  assert.equal(withCredit("{requests}"), "{requests}" + CREDIT);
+  assert.equal(withCredit("{requests}", false), "{requests}");
+  assert.equal(withCredit("x via github.com/pfstr/cloudflare-abuseipdb-reporter"), "x via github.com/pfstr/cloudflare-abuseipdb-reporter");
 });

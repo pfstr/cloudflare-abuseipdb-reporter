@@ -66,6 +66,7 @@ Copy [`examples/abuseipdb-report.yml`](examples/abuseipdb-report.yml) to `.githu
 | `waf-actions` | `block` | Comma-separated WAF actions to include |
 | `categories` | `21` | [AbuseIPDB categories](https://www.abuseipdb.com/categories), 21 = Web App Attack |
 | `comment` | `Blocked by Cloudflare WAF: {count} request(s): {requests}` | Report text, placeholders `{count}` and `{requests}`. Comments are capped at 1000 characters; a long request list is shortened so text after it is kept |
+| `credit` | `true` | Appends ` • Reported by: github.com/pfstr/cloudflare-abuseipdb-reporter` to each comment; `false` turns it off |
 | `min-hits` | `1` | Minimum events per IP in the window |
 | `ignore-ips` | | Comma-separated IPs never to report |
 | `hours` | | Empty = catch up since the last run; number = fixed window, state unchanged |

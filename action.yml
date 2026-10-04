@@ -27,6 +27,9 @@ inputs:
   comment:
     description: Report comment. Placeholders {count} and {requests} (method and path, up to 8). Never put personal data here.
     default: "Blocked by Cloudflare WAF: {count} request(s): {requests}"
+  credit:
+    description: Append " • Reported by: github.com/pfstr/cloudflare-abuseipdb-reporter" to each comment. Set to false to turn it off.
+    default: "true"
   min-hits:
     description: Only report IPs with at least this many events in the window.
     default: "1"
@@ -72,6 +75,7 @@ runs:
         CATEGORIES: ${{ inputs.categories }}
         COMMENT: ${{ inputs.comment }}
         MIN_HITS: ${{ inputs.min-hits }}
+        CREDIT: ${{ inputs.credit }}
         IGNORE_IPS: ${{ inputs.ignore-ips }}
         HOURS: ${{ inputs.hours }}
         END_OFFSET_HOURS: ${{ inputs.end-offset-hours }}

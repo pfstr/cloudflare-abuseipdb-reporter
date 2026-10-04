@@ -63,6 +63,13 @@ export function buildComment(template, e, maxRequests = 8) {
   return fixed.replaceAll("{requests}", requests).slice(0, 1000);
 }
 
+export const CREDIT = " • Reported by: github.com/pfstr/cloudflare-abuseipdb-reporter";
+
+/** Appends the credit line unless it is switched off or the template already names the project. */
+export function withCredit(template, enabled = true) {
+  return enabled && !template.includes("cloudflare-abuseipdb-reporter") ? template + CREDIT : template;
+}
+
 /** CSV in the format of https://www.abuseipdb.com/bulk-report */
 export function toCsv(rows, categories) {
   const q = (v) => `"${String(v).replace(/"/g, '""')}"`;

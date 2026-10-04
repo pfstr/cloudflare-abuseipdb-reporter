@@ -2,7 +2,7 @@
 // Configured through environment variables, which action.yml sets from its inputs (see README).
 
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
-import { aggregate, buildComment, computeWindow, isPrivate, toCsv } from "./lib.mjs";
+import { aggregate, buildComment, computeWindow, isPrivate, toCsv, withCredit } from "./lib.mjs";
 
 const env = (k, d = "") => (process.env[k] ?? "").trim() || d;
 const list = (k, d = "") => env(k, d).split(",").map((s) => s.trim()).filter(Boolean);
@@ -13,7 +13,10 @@ const ZONE_ID = env("ZONE_ID");
 const RULE_IDS = list("RULE_IDS");
 const ACTIONS = list("WAF_ACTIONS", "block");
 const CATEGORIES = env("CATEGORIES", "21");
-const TEMPLATE = env("COMMENT", "Blocked by Cloudflare WAF: {count} request(s): {requests}");
+const TEMPLATE = withCredit(
+  env("COMMENT", "Blocked by Cloudflare WAF: {count} request(s): {requests}"),
+  !["false", "0"].includes(env("CREDIT")),
+);
 const MIN_HITS = parseInt(env("MIN_HITS", "1"), 10);
 const IGNORE = new Set(list("IGNORE_IPS"));
 const STATE_FILE = env("STATE_FILE");
