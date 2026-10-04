@@ -68,6 +68,13 @@ test("comment fills placeholders and truncates the request list", () => {
   assert.ok(buildComment("{requests}".repeat(50), e).length <= 1000);
 });
 
+test("long request lists are shortened so the end of the comment survives", () => {
+  const e = { count: 3, requests: new Set(Array.from({ length: 3 }, (_, i) => `GET /${"x".repeat(400)}${i}`)) };
+  const c = buildComment("Blocked: {requests} • Reported by example", e);
+  assert.ok(c.length <= 1000);
+  assert.match(c, /… • Reported by example$/);
+});
+
 test("csv escapes quotes", () => {
   const csv = toCsv([{ ip: "1.2.3.4", date: "2026-10-03T12:00:00Z", comment: 'say "hi"' }], "21,15");
   assert.equal(csv, 'IP,Categories,ReportDate,Comment\n1.2.3.4,"21,15",2026-10-03T12:00:00Z,"say ""hi"""\n');

@@ -52,8 +52,15 @@ export function aggregate(events) {
 export function buildComment(template, e, maxRequests = 8) {
   const list = [...e.requests];
   const more = list.length > maxRequests ? ` (+${list.length - maxRequests} more)` : "";
-  const requests = list.slice(0, maxRequests).join(", ") + more;
-  return template.replaceAll("{count}", String(e.count)).replaceAll("{requests}", requests).slice(0, 1000);
+  let requests = list.slice(0, maxRequests).join(", ") + more;
+  const fixed = template.replaceAll("{count}", String(e.count));
+  // Shorten the request list rather than the end of the comment, so a trailing credit or note survives.
+  const slots = fixed.split("{requests}").length - 1;
+  if (slots) {
+    const budget = Math.floor((1000 - (fixed.length - slots * "{requests}".length)) / slots);
+    if (requests.length > budget) requests = requests.slice(0, Math.max(0, budget - 1)) + "…";
+  }
+  return fixed.replaceAll("{requests}", requests).slice(0, 1000);
 }
 
 /** CSV in the format of https://www.abuseipdb.com/bulk-report */
