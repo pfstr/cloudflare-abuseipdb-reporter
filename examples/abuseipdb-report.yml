@@ -32,6 +32,6 @@ jobs:
           abuseipdb-api-key: ${{ secrets.ABUSEIPDB_API_KEY }}
           zone-id: 0123456789abcdef0123456789abcdef      # your zone ID
           rule-ids: 0123456789abcdef0123456789abcdef     # ID of your WAF rule (see README)
-          comment: "Blocked by WAF: {count} request(s) probing for WordPress files and secrets: {requests}"
+          comment: "Blocked by WAF: {count} request(s) probing for PHP scripts, WordPress files or secrets on a site without PHP: {requests}"
           hours: ${{ inputs.hours }}
           dry-run: ${{ inputs.dry_run || false }}
