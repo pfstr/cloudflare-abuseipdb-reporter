@@ -1,5 +1,7 @@
 # Copy to .github/workflows/abuseipdb-report.yml in a (private) repository of your own.
 # Secrets: CF_ANALYTICS_TOKEN (Zone > Analytics > Read), ABUSEIPDB_API_KEY
+# Two jobs: your own WAF custom rule, and the CVE rules of the Cloudflare Managed Ruleset.
+# Drop the second job if you don't want to report managed-rule blocks.
 name: Report WAF blocks to AbuseIPDB
 
 on:
@@ -10,6 +12,11 @@ on:
       hours:
         description: "Empty = catch up since last run; number = fixed window of n full hours"
         default: ""
+      job:
+        description: "Jobs to run (backfill one job at a time, otherwise IPs are reported twice)"
+        type: choice
+        options: [all, custom, cve]
+        default: all
       dry_run:
         description: "Only list, do not report"
         type: boolean
@@ -24,6 +31,7 @@ permissions:
 
 jobs:
   report:
+    if: ${{ github.event_name == 'schedule' || inputs.job != 'cve' }}
     runs-on: ubuntu-latest
     steps:
       - uses: pfstr/cloudflare-abuseipdb-reporter@v1
@@ -33,5 +41,23 @@ jobs:
           zone-id: 0123456789abcdef0123456789abcdef      # your zone ID
           rule-ids: 0123456789abcdef0123456789abcdef     # ID of your WAF rule (see README)
           comment: "Blocked by WAF: {count} request(s) probing for PHP scripts, WordPress files or secrets on a site without PHP: {requests}"
+          hours: ${{ inputs.hours }}
+          dry-run: ${{ inputs.dry_run || false }}
+
+  # Separate job with its own state-key: both jobs use the same state file name.
+  report-cve:
+    if: ${{ github.event_name == 'schedule' || inputs.job != 'custom' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: pfstr/cloudflare-abuseipdb-reporter@v1
+        with:
+          cloudflare-api-token: ${{ secrets.CF_ANALYTICS_TOKEN }}
+          abuseipdb-api-key: ${{ secrets.ABUSEIPDB_API_KEY }}
+          zone-id: 0123456789abcdef0123456789abcdef      # your zone ID
+          sources: firewallManaged
+          description-match: "%CVE:%"                    # CVE signatures only, no generic SQLi/XSS rules
+          categories: "15,21"
+          comment: "Blocked exploit attempt ({rules}): {count} request(s): {requests}"
+          state-key: abuseipdb-cve-state-
           hours: ${{ inputs.hours }}
           dry-run: ${{ inputs.dry_run || false }}

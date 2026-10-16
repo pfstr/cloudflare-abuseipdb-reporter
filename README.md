@@ -6,7 +6,7 @@ Built and run in production by [Rafael Pfister](https://rafaelpfister.ch/?utm_so
 
 ## What it does
 
-- Reads the firewall events of the rule IDs you choose from the Cloudflare GraphQL Analytics API (`firewallEventsAdaptive`). This works on the Free plan.
+- Reads the firewall events of the rules you choose (custom rule IDs, or the CVE rules of the managed ruleset) from the Cloudflare GraphQL Analytics API (`firewallEventsAdaptive`). This works on the Free plan.
 - Groups the events per IP and sends **one report per IP** with the method and path of the blocked requests, timestamped at the first event.
 - Keeps track of the last reported hour in the Actions cache. A late or skipped scheduled run is caught up on the next run, and no hour is reported twice.
 - Skips private, loopback, link-local, CGNAT and ULA addresses, plus any IPs you list.
@@ -63,7 +63,7 @@ Create an account at [abuseipdb.com](https://www.abuseipdb.com/), then Account, 
 
 ### 5. Workflow
 
-Copy [`examples/abuseipdb-report.yml`](examples/abuseipdb-report.yml) to `.github/workflows/` in a private repository, fill in `zone-id` and `rule-ids`, and run it once manually with `dry-run` to see what would be reported.
+Copy [`examples/abuseipdb-report.yml`](examples/abuseipdb-report.yml) to `.github/workflows/` in a private repository, fill in `zone-id` and `rule-ids` (and keep or drop the `report-cve` job), and run it once manually with `dry-run` to see what would be reported.
 
 ```yaml
 - uses: pfstr/cloudflare-abuseipdb-reporter@v1
