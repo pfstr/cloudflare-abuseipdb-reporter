@@ -1,6 +1,6 @@
 # Cloudflare WAF to AbuseIPDB
 
-A GitHub Action that reports IP addresses blocked by selected [Cloudflare WAF](https://developers.cloudflare.com/waf/custom-rules/) custom rules to [AbuseIPDB](https://www.abuseipdb.com/). It runs on a schedule in your own repository. You don't need a server or any dependencies, and it uses a read-only Cloudflare token.
+A GitHub Action that reports IP addresses blocked by selected [Cloudflare WAF](https://developers.cloudflare.com/waf/custom-rules/) custom rules, or by the CVE rules of the [Cloudflare Managed Ruleset](https://developers.cloudflare.com/waf/managed-rules/), to [AbuseIPDB](https://www.abuseipdb.com/). It runs on a schedule in your own repository. You don't need a server or any dependencies, and it uses a read-only Cloudflare token.
 
 Built and run in production by [Rafael Pfister](https://rafaelpfister.ch/?utm_source=github&utm_medium=readme&utm_campaign=cloudflare-abuseipdb-reporter). Background and walkthrough: [Reporting Cloudflare WAF blocks to AbuseIPDB automatically](https://rafaelpfister.ch/en/blog/cloudflare-waf-abuseipdb?utm_source=github&utm_medium=readme&utm_campaign=cloudflare-abuseipdb-reporter).
 
@@ -14,7 +14,26 @@ Built and run in production by [Rafael Pfister](https://rafaelpfister.ch/?utm_so
 
 ## Why only selected rules
 
-Report what is unambiguous. A rule that blocks `/wp-login.php` on a site without WordPress, or `/.env` on any site, only matches scanners. Rate limits, bot scores, geo blocks and managed challenges also hit search engine crawlers and real visitors, and reporting them pollutes the database. That is why `rule-ids` is required and there is no "report everything" mode.
+Report what is unambiguous. A rule that blocks `/wp-login.php` on a site without WordPress, or `/.env` on any site, only matches scanners. Rate limits, bot scores, geo blocks and managed challenges also hit search engine crawlers and real visitors, and reporting them pollutes the database. That is why you select rules explicitly and there is no "report everything" mode.
+
+## Managed ruleset: CVE rules
+
+The rules of the Cloudflare Managed Ruleset that carry a CVE in their description (for example `React - RCE - CVE:CVE-2025-55182`) match exploit payloads for a specific vulnerability. A request that triggers one of them is an exploit attempt, so these are worth reporting too. Generic managed rules (SQLi or XSS heuristics, anomaly scores) can also match legitimate form input; leave those out.
+
+```yaml
+- uses: pfstr/cloudflare-abuseipdb-reporter@v1
+  with:
+    cloudflare-api-token: ${{ secrets.CF_ANALYTICS_TOKEN }}
+    abuseipdb-api-key: ${{ secrets.ABUSEIPDB_API_KEY }}
+    zone-id: <zone id>
+    sources: firewallManaged
+    description-match: "%CVE:%"
+    categories: "15,21"
+    comment: "Blocked exploit attempt ({rules}): {count} request(s): {requests}"
+    state-key: abuseipdb-cve-state-
+```
+
+`sources` without `rule-ids` or `description-match` is refused. Run this as a **separate job** next to your custom-rule job, with its own `state-key`: both jobs use the same state file name, and two steps in one job would share it.
 
 ## Setup
 
@@ -62,10 +81,12 @@ Copy [`examples/abuseipdb-report.yml`](examples/abuseipdb-report.yml) to `.githu
 | `cloudflare-api-token` | (required) | Token with Zone, Analytics, Read |
 | `abuseipdb-api-key` | | Not needed for `dry-run` and `csv-file` |
 | `zone-id` | (required) | Cloudflare zone ID |
-| `rule-ids` | (required) | Comma-separated WAF rule IDs |
+| `rule-ids` | | Comma-separated WAF rule IDs; required unless `sources` and `description-match` are set |
+| `sources` | | Comma-separated event sources, e.g. `firewallManaged` |
+| `description-match` | | SQL LIKE pattern on the rule description, e.g. `%CVE:%` |
 | `waf-actions` | `block` | Comma-separated WAF actions to include |
 | `categories` | `21` | [AbuseIPDB categories](https://www.abuseipdb.com/categories), 21 = Web App Attack |
-| `comment` | `Blocked by Cloudflare WAF: {count} request(s): {requests}` | Report text, placeholders `{count}` and `{requests}`. Comments are capped at 1000 characters; a long request list is shortened so text after it is kept |
+| `comment` | `Blocked by Cloudflare WAF: {count} request(s): {requests}` | Report text, placeholders `{count}`, `{rules}` (rule descriptions) and `{requests}`. Comments are capped at 1000 characters; a long request list is shortened so text after it is kept |
 | `credit` | `true` | Appends ` • Reported by: github.com/pfstr/cloudflare-abuseipdb-reporter` to each comment; `false` turns it off |
 | `min-hits` | `1` | Minimum events per IP in the window |
 | `ignore-ips` | | Comma-separated IPs never to report |

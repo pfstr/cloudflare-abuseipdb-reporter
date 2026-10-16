@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { aggregate, buildComment, computeWindow, isPrivate, toCsv, withCredit, CREDIT } from "../src/lib.mjs";
+import { aggregate, buildComment, buildFilter, computeWindow, isPrivate, toCsv, withCredit, CREDIT } from "../src/lib.mjs";
 
 const now = new Date("2026-10-03T14:27:00Z");
 const iso = (d) => d.toISOString();
@@ -84,4 +84,30 @@ test("credit is appended once and can be switched off", () => {
   assert.equal(withCredit("{requests}"), "{requests}" + CREDIT);
   assert.equal(withCredit("{requests}", false), "{requests}");
   assert.equal(withCredit("x via github.com/pfstr/cloudflare-abuseipdb-reporter"), "x via github.com/pfstr/cloudflare-abuseipdb-reporter");
+});
+
+test("filter by rule IDs keeps the previous behaviour", () => {
+  const f = buildFilter({ start: "s", end: "e", ruleIds: ["r1"], actions: ["block"] });
+  assert.deepEqual(f, { datetime_geq: "s", datetime_lt: "e", ruleId_in: ["r1"], action_in: ["block"] });
+});
+
+test("managed CVE rules are selected by source and description", () => {
+  const f = buildFilter({ start: "s", end: "e", actions: ["block"], sources: ["firewallManaged"], descriptionLike: "%CVE:%" });
+  assert.deepEqual(f.source_in, ["firewallManaged"]);
+  assert.equal(f.description_like, "%CVE:%");
+  assert.equal(f.ruleId_in, undefined);
+});
+
+test("a whole source or an empty selection is refused", () => {
+  assert.throws(() => buildFilter({ sources: ["firewallManaged"] }), /description-match/);
+  assert.throws(() => buildFilter({}), /rule-ids or sources/);
+});
+
+test("{rules} lists the distinct rule descriptions", () => {
+  const byIp = aggregate([
+    { clientIP: "203.0.113.5", datetime: "2026-10-16T07:02:54Z", clientRequestHTTPMethodName: "POST", clientRequestPath: "/", description: "React - RCE - CVE:CVE-2025-55182" },
+    { clientIP: "203.0.113.5", datetime: "2026-10-16T07:02:55Z", clientRequestHTTPMethodName: "POST", clientRequestPath: "/", description: "React - RCE - CVE:CVE-2025-55182" },
+  ]);
+  const c = buildComment("Exploit attempt ({rules}): {count} request(s): {requests}", byIp.get("203.0.113.5"));
+  assert.equal(c, "Exploit attempt (React - RCE - CVE:CVE-2025-55182): 2 request(s): POST /");
 });

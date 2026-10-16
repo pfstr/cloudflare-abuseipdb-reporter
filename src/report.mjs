@@ -1,8 +1,8 @@
-// Reads Cloudflare WAF events of the configured rule(s) and reports the client IPs to AbuseIPDB.
+// Reads Cloudflare WAF events of the configured rule(s) or managed rules and reports the client IPs to AbuseIPDB.
 // Configured through environment variables, which action.yml sets from its inputs (see README).
 
 import { appendFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
-import { aggregate, buildComment, computeWindow, isPrivate, toCsv, withCredit } from "./lib.mjs";
+import { aggregate, buildComment, buildFilter, computeWindow, isPrivate, toCsv, withCredit } from "./lib.mjs";
 
 const env = (k, d = "") => (process.env[k] ?? "").trim() || d;
 const list = (k, d = "") => env(k, d).split(",").map((s) => s.trim()).filter(Boolean);
@@ -12,6 +12,8 @@ const ABUSE_KEY = env("ABUSEIPDB_API_KEY");
 const ZONE_ID = env("ZONE_ID");
 const RULE_IDS = list("RULE_IDS");
 const ACTIONS = list("WAF_ACTIONS", "block");
+const SOURCES = list("SOURCES");
+const DESCRIPTION_LIKE = env("DESCRIPTION_MATCH");
 const CATEGORIES = env("CATEGORIES", "21");
 const TEMPLATE = withCredit(
   env("COMMENT", "Blocked by Cloudflare WAF: {count} request(s): {requests}"),
@@ -26,7 +28,8 @@ const HOURS = env("HOURS") ? parseInt(env("HOURS"), 10) : null;
 
 if (!CF_TOKEN) throw new Error("cloudflare-api-token is required");
 if (!ZONE_ID) throw new Error("zone-id is required");
-if (!RULE_IDS.length) throw new Error("rule-ids is required");
+// Validate the rule selection before anything else; the window itself is filled in per request.
+buildFilter({ ruleIds: RULE_IDS, sources: SOURCES, descriptionLike: DESCRIPTION_LIKE });
 if (!DRY_RUN && !ABUSE_KEY) throw new Error("abuseipdb-api-key is required (or set dry-run)");
 
 let stateEnd = null;
@@ -42,11 +45,10 @@ if (win.empty) {
   process.exit(0);
 }
 
-const QUERY = `query($zone: String!, $start: Time!, $end: Time!, $rules: [String!], $actions: [String!]) {
+const QUERY = `query($zone: String!, $filter: ZoneFirewallEventsAdaptiveFilter_InputObject!) {
   viewer { zones(filter: { zoneTag: $zone }) {
-    firewallEventsAdaptive(limit: 10000, orderBy: [datetime_ASC],
-      filter: { datetime_geq: $start, datetime_lt: $end, ruleId_in: $rules, action_in: $actions }) {
-      datetime clientIP clientRequestPath clientRequestHTTPMethodName clientAsn clientCountryName
+    firewallEventsAdaptive(limit: 10000, orderBy: [datetime_ASC], filter: $filter) {
+      datetime clientIP clientRequestPath clientRequestHTTPMethodName clientAsn clientCountryName description
     }
   } }
 }`;
@@ -60,7 +62,17 @@ async function fetchEvents() {
       headers: { Authorization: `Bearer ${CF_TOKEN}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         query: QUERY,
-        variables: { zone: ZONE_ID, start: from, end: win.end.toISOString(), rules: RULE_IDS, actions: ACTIONS },
+        variables: {
+          zone: ZONE_ID,
+          filter: buildFilter({
+            start: from,
+            end: win.end.toISOString(),
+            ruleIds: RULE_IDS,
+            actions: ACTIONS,
+            sources: SOURCES,
+            descriptionLike: DESCRIPTION_LIKE,
+          }),
+        },
       }),
     });
     const json = await res.json();

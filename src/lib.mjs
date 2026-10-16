@@ -29,6 +29,23 @@ export function isPrivate(ip) {
   return ip.includes(":") ? PRIVATE_V6.test(ip) : PRIVATE_V4.test(ip);
 }
 
+/**
+ * GraphQL filter for firewallEventsAdaptive. Rule IDs, sources and the description pattern are combined with AND.
+ * Refuses a filter that would select every event of a source (e.g. the whole managed ruleset).
+ */
+export function buildFilter({ start, end, ruleIds = [], actions = [], sources = [], descriptionLike = "" }) {
+  if (!ruleIds.length && !sources.length) throw new Error("rule-ids or sources is required");
+  if (sources.length && !ruleIds.length && !descriptionLike) {
+    throw new Error("sources needs rule-ids or description-match, reporting a whole source is not supported");
+  }
+  const filter = { datetime_geq: start, datetime_lt: end };
+  if (ruleIds.length) filter.ruleId_in = ruleIds;
+  if (actions.length) filter.action_in = actions;
+  if (sources.length) filter.source_in = sources;
+  if (descriptionLike) filter.description_like = descriptionLike;
+  return filter;
+}
+
 /** Group firewall events by client IP. */
 export function aggregate(events) {
   const byIp = new Map();
@@ -36,24 +53,26 @@ export function aggregate(events) {
     const e = byIp.get(ev.clientIP) ?? {
       count: 0,
       requests: new Set(),
+      rules: new Set(),
       first: ev.datetime,
       asn: ev.clientAsn,
       country: ev.clientCountryName,
     };
     e.count++;
     e.requests.add(`${ev.clientRequestHTTPMethodName} ${ev.clientRequestPath}`);
+    if (ev.description) e.rules.add(ev.description);
     if (ev.datetime < e.first) e.first = ev.datetime;
     byIp.set(ev.clientIP, e);
   }
   return byIp;
 }
 
-/** AbuseIPDB comment, capped below the 1024-character limit. Placeholders: {count}, {requests}. */
+/** AbuseIPDB comment, capped below the 1024-character limit. Placeholders: {count}, {rules}, {requests}. */
 export function buildComment(template, e, maxRequests = 8) {
   const list = [...e.requests];
   const more = list.length > maxRequests ? ` (+${list.length - maxRequests} more)` : "";
   let requests = list.slice(0, maxRequests).join(", ") + more;
-  const fixed = template.replaceAll("{count}", String(e.count));
+  const fixed = template.replaceAll("{count}", String(e.count)).replaceAll("{rules}", [...(e.rules ?? [])].join(", "));
   // Shorten the request list rather than the end of the comment, so a trailing credit or note survives.
   const slots = fixed.split("{requests}").length - 1;
   if (slots) {

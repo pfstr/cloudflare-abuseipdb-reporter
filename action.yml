@@ -16,8 +16,14 @@ inputs:
     description: Cloudflare zone ID (dashboard, zone overview, right column).
     required: true
   rule-ids:
-    description: Comma-separated WAF rule IDs whose events are reported. Only report rules that match unambiguous attacks.
-    required: true
+    description: Comma-separated WAF rule IDs whose events are reported. Only report rules that match unambiguous attacks. Required unless sources and description-match are set.
+    default: ""
+  sources:
+    description: Comma-separated event sources (e.g. firewallManaged for the Cloudflare Managed Ruleset). Needs rule-ids or description-match.
+    default: ""
+  description-match:
+    description: "Only events whose rule description matches this SQL LIKE pattern, e.g. '%CVE:%' for the CVE rules of the managed ruleset."
+    default: ""
   waf-actions:
     description: Comma-separated WAF actions to report.
     default: block
@@ -25,7 +31,7 @@ inputs:
     description: AbuseIPDB category IDs, comma-separated (21 = Web App Attack). See https://www.abuseipdb.com/categories
     default: "21"
   comment:
-    description: Report comment. Placeholders {count} and {requests} (method and path, up to 8). Never put personal data here.
+    description: Report comment. Placeholders {count}, {rules} (rule descriptions) and {requests} (method and path, up to 8). Never put personal data here.
     default: "Blocked by Cloudflare WAF: {count} request(s): {requests}"
   credit:
     description: "Append ' • Reported by: github.com/pfstr/cloudflare-abuseipdb-reporter' to each comment. Set to false to turn it off."
@@ -71,6 +77,8 @@ runs:
         ABUSEIPDB_API_KEY: ${{ inputs.abuseipdb-api-key }}
         ZONE_ID: ${{ inputs.zone-id }}
         RULE_IDS: ${{ inputs.rule-ids }}
+        SOURCES: ${{ inputs.sources }}
+        DESCRIPTION_MATCH: ${{ inputs.description-match }}
         WAF_ACTIONS: ${{ inputs.waf-actions }}
         CATEGORIES: ${{ inputs.categories }}
         COMMENT: ${{ inputs.comment }}
